@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: ai-code-reviewer
+  threads:
+    virtual:
+      enabled: true
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: qwen2.5-coder # Or llama3, configrable by user
+
+gitlab:
+  url: https://gitlab.com
+  personal-access-token: ${GITLAB_TOKEN:your-token-here}
+
+rules:
+  file:
+    path: rules.md
