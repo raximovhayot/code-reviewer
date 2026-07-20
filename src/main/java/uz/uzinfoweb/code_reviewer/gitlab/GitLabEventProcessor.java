@@ -9,8 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import uz.uzinfoweb.code_reviewer.core.CodeReviewService;
-
-import java.nio.charset.StandardCharsets;
+import uz.uzinfoweb.code_reviewer.rules.RuleService;
 
 @Service
 public class GitLabEventProcessor {
@@ -19,17 +18,17 @@ public class GitLabEventProcessor {
 
     private final CodeReviewService codeReviewService;
     private final GitLabApi gitLabApi;
-    private final String rulesFilePath;
+    private final RuleService ruleService;
 
     public GitLabEventProcessor(
             CodeReviewService codeReviewService,
+            RuleService ruleService,
             @Value("${gitlab.url}") String gitlabUrl,
-            @Value("${gitlab.personal-access-token}") String gitlabToken,
-            @Value("${rules.file.path:rules.md}") String rulesFilePath) {
+            @Value("${gitlab.personal-access-token}") String gitlabToken) {
         
         this.codeReviewService = codeReviewService;
+        this.ruleService = ruleService;
         this.gitLabApi = new GitLabApi(gitlabUrl, gitlabToken);
-        this.rulesFilePath = rulesFilePath;
     }
 
     @Async
@@ -45,7 +44,7 @@ public class GitLabEventProcessor {
                 log.info("Processing MR !{} for project {}", mergeRequestIid, projectId);
 
                 String diff = getMrDiff(projectId, mergeRequestIid);
-                String rules = loadRules();
+                String rules = ruleService.loadRules();
                 String reviewComment = codeReviewService.reviewCode(diff, rules);
 
                 postComment(projectId, mergeRequestIid, reviewComment);
@@ -54,15 +53,6 @@ public class GitLabEventProcessor {
             log.error("GitLab API error while processing MR event", e);
         } catch (Exception e) {
             log.error("Unexpected error while processing MR event", e);
-        }
-    }
-
-    private String loadRules() {
-        try {
-            return java.nio.file.Files.readString(java.nio.file.Path.of(rulesFilePath), StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            log.warn("Could not load rules from {}, falling back to default.", rulesFilePath, e);
-            return "Review the code for clean code practices and potential bugs.";
         }
     }
 
