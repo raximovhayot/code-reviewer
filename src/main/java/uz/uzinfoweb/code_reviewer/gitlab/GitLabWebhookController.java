@@ -1,6 +1,7 @@
 package uz.uzinfoweb.code_reviewer.gitlab;
 
 import org.gitlab4j.api.webhook.MergeRequestEvent;
+import org.gitlab4j.api.webhook.NoteEvent;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
@@ -18,10 +19,12 @@ public class GitLabWebhookController {
     private static final Logger log = LoggerFactory.getLogger(GitLabWebhookController.class);
 
     private final GitLabEventProcessor eventProcessor;
+    private final GitLabNoteProcessor noteProcessor;
     private final JsonMapper jsonMapper = new JsonMapper();
 
-    public GitLabWebhookController(GitLabEventProcessor eventProcessor) {
+    public GitLabWebhookController(GitLabEventProcessor eventProcessor, GitLabNoteProcessor noteProcessor) {
         this.eventProcessor = eventProcessor;
+        this.noteProcessor = noteProcessor;
     }
 
     @PostMapping
@@ -30,6 +33,9 @@ public class GitLabWebhookController {
             if ("Merge Request Hook".equals(eventType)) {
                 MergeRequestEvent event = jsonMapper.readValue(payload, MergeRequestEvent.class);
                 eventProcessor.handleMergeRequestEvent(event);
+            } else if ("Note Hook".equals(eventType)) {
+                NoteEvent event = jsonMapper.readValue(payload, NoteEvent.class);
+                noteProcessor.handleNoteEvent(event);
             }
         } catch (JsonProcessingException e) {
             log.error("Failed to parse GitLab webhook payload as JSON", e);
